@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<!-- saved from url=(0056)http://www-personal.umich.edu/~hmrazali/grade-formatter/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>GEFF</title>
+    <link rel="shortcut icon" href="http://www-personal.umich.edu/~hmrazali/grade-formatter/assets/favicon.ico" type="image/vnd.microsoft.icon">
+    <link href="./GEFF_files/bootstrap.css" rel="stylesheet">
+    <style type="text/css">
+        /*help!!!*/
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            height: 130px;
+            background-color: rgb(0, 42, 84);
+        }
+
+        .header .header-content {
+            position: relative;
+            text-align: center;
+        }
+
+        .header-image {
+            position: absolute;
+            top: 10px;
+        }
+
+        .header .header-image > img {
+            width: 100px;
+            vertical-align: middle;
+        }
+
+        .header .header-text {
+            color: white;
+            font-size: 45px;
+            font-weight: 100;
+            height: 130px;
+            line-height: 130px;
+        }
+
+        .content {
+            height: calc(100% - 130px);
+        }
+
+        .content .description {
+            padding-top: 10px;
+        }
+
+        .content .file-input {
+            height: calc(100% - 50px);
+            padding-top: 5%;
+            margin-top: 50px;
+            border: 3px dashed #f1f1f1;
+        }
+
+        .content .file-input label {
+            font-weight: 200;
+        }
+
+        .content .drop-file-instruct {
+            font-size: 65px;
+            color: rgb(230, 230, 230);
+            font-weight: 200;
+            pointer-events: none;
+        }
+
+        .content .drop-file-or {
+            margin-top: -10px;
+            margin-bottom: 10px;
+            color: rgb(230, 230, 230);
+            pointer-events: none;
+            font-size: 25px;
+        }
+
+        .content #upload-file-info {
+            padding-top: 10px;
+        }
+
+        .content .mpathways {
+            padding-top: 10px;
+            font-size: 40px;
+        }
+
+        .content .mpathways a {
+            text-decoration: underline;
+        }
+
+        .content .mpathways .outlink {
+            margin-left: 10px;
+            width: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="row header">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="row header-content">
+                <div class="header-image">
+                    <img src="./GEFF_files/2color-transparentbg.png">
+                </div>
+                <div class="header-text">
+                    Grade Export File Formatter
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row content">
+        <div class="col-md-10 col-md-offset-1 text-center description">
+            Use Grade Export File Formatter (G.E.F.F.) to reformat the "CSV File" from "Grades" into acceptable format for upload into "Faculty Center"
+        </div>
+        <div class="col-md-10 col-md-offset-1 file-input" id="drop-zone">
+
+            <div class="text-center drop-file-instruct">
+                Drag file here
+            </div>
+            <div class="text-center drop-file-or">
+                or
+            </div>
+            <div class="text-center">
+                <label class="btn btn-primary" for="csv-file">
+                    <input id="csv-file" type="file" name="files" style="display:none;">
+                    Choose CSV Grade File
+                </label>
+            </div>
+            <div class="text-center" id="upload-file-info">
+            </div>
+        </div>
+    </div>
+
+<script type="text/javascript" src="./GEFF_files/papaparse.min.js"></script>
+<script type="text/javascript" src="./GEFF_files/jquery.js"></script>
+<script>
+    (function() {
+        var targetColumns = ['SIS Login ID', 'Final Grade'];
+        var outputFilename;
+        var $fileInfo = $('#upload-file-info'),
+            $fileInput = $("#csv-file");
+        var dropZone = document.getElementById('drop-zone');
+
+        function handleFileSelect(evt) {
+            var file;
+            if (evt.type === 'drop') {
+                file = evt.dataTransfer.files[0];
+                evt.stopPropagation();
+                evt.preventDefault();
+            } else {
+                file = evt.target.files[0];
+            }
+
+            Papa.parse(file, {
+                header: true,
+                dynamicTyping: true,
+                complete: parseCompleteHandler
+            });
+
+            var splitName = file.name.split('.'),
+                filenameIndex = splitName.length >= 2 ? splitName.length - 2 : 0;
+            
+            splitName[filenameIndex] = splitName[filenameIndex] + '-geff';
+            outputFilename = splitName.join('.');
+
+            $fileInfo
+                .empty()
+                .append('<div><b>Input: </b>' + file.name + '</div>' );
+        }
+
+        function parseCompleteHandler(results) {
+            var targetData = results.data.slice(1); // ignore first row
+            formattedData = formatData(targetData, targetColumns);
+            downloadCSVFile(formattedData);
+            console.log('data', formattedData);
+        }
+
+        function formatData(data, targetCols) {
+            return data.map(function(row) {
+                return targetCols.map(function(col) {
+                    return row[col];
+                });
+            });
+        }
+
+        function downloadCSVFile(data) {
+            // credit: http://stackoverflow.com/questions/14964035/how-to-export-javascript-array-info-to-csv-on-client-side
+            var csvContent = "data:text/csv;charset=utf-8,";
+            data.forEach(function(infoArray, index){
+               dataString = infoArray.join(",");
+               csvContent += index < data.length ? dataString + "\n" : dataString;
+            });
+            var encodedUri = encodeURI(csvContent);
+            var link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", outputFilename);
+            document.body.appendChild(link); // Required for FF
+            // delay to give impression of processing file
+            setTimeout(function() {
+                link.click(); // This will download the data file
+                var $outputMessage = $('<div></div>')
+                    .hide()
+                    .append('<div><b>Output: </b>' + outputFilename + '</div>' )
+                    .append('<div class="mpathways"><a href="https://csprod.dsc.umich.edu/services/faculty/" target="_blank">Upload to Faculty Center<img src="./assets/popout.png" class="outlink"></a></div>')
+                    .appendTo($fileInfo)
+                    .fadeIn();
+            }, 800);
+        }
+
+        function handleDragOver(evt) {
+            evt.stopPropagation();
+            evt.preventDefault();
+            evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+        }
+
+        $(document).ready(function(){
+            // credit: https://www.html5rocks.com/en/tutorials/file/dndfiles/
+            dropZone.addEventListener('dragover', handleDragOver, false);
+            dropZone.addEventListener('drop', handleFileSelect, false);
+            $fileInput.on('change', handleFileSelect);
+        });
+    })();
+
+</script>
+
+</body></html>
